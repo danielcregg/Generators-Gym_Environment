@@ -1,1 +1,1 @@
-from gym_tictac4.envs.tictac4_env import TicTac4
+from gym_generators.envs.generators_env import Generators
