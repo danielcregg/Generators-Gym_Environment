@@ -2,7 +2,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-class TicTac4(gym.Env):
+class Generators(gym.Env):
 	metadata = {'render.modes': ['human']}
 
 
