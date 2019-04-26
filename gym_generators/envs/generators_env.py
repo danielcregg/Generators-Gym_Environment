@@ -176,15 +176,3 @@ class GeneratorsEnv(gym.Env):
         self.reward = 0
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
-
-
-# delete if it's registered
-env_name = 'Generators-v0'
-if env_name in gym.envs.registry.env_specs:
-    del gym.envs.registry.env_specs[env_name]
-
-# register the environment so we can play with it
-gym.register(
-    id=env_name,
-    entry_point=Generators
-)
