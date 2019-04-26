@@ -1,5 +1,6 @@
 import gym
 from gym import spaces
+import numpy as np
 import pandas as pd  # import pandas to use pandas DataFrame
 from math import sin
 from math import exp
@@ -15,7 +16,7 @@ class GeneratorsEnv(gym.Env):
     M = 24  # M = number of hours in day
     E = 10  # Emissions scaling factor
 
-    # DataFrame created whith generator data in the form of list of tuples
+    # DataFrame created with generator data in the form of list of tuples
     generator_characteristics = pd.DataFrame(
         [(150, 470, 786.7988, 38.5397, 0.1524, 450, 0.041, 103.3908, -2.4444, 0.0312, 0.5035, 0.0207, 80, 80),
          (135, 470, 451.3251, 46.1591, 0.1058, 600, 0.036, 103.3908, -2.4444, 0.0312, 0.5035, 0.0207, 80, 80),
@@ -45,7 +46,9 @@ class GeneratorsEnv(gym.Env):
          (0.000019, 0.000018, 0.000016, 0.000014, 0.000015, 0.000014, 0.000016, 0.000015, 0.000042, 0.000019),
          (0.000020, 0.000018, 0.000016, 0.000015, 0.000016, 0.000015, 0.000018, 0.000016, 0.000019, 0.000044)])
 
-    # self.state = np.array([0.0,74.0,148.0,148.0,74.0,148.0,74.0,74.0,148.0,98.0,84.0,44.0,-78.0,-148.0,-148.0,-222.0,-74.0,148.0,148.0,196.0,-48.0,-296.0,-296.0,-148.0])
+    # self.state = np.array([0.0,74.0,148.0,148.0,74.0,148.0,74.0,74.0,148.0,98.0,84.0,44.0,-78.0,-148.0,-148.0,-222.0,
+    # -74.0,148.0,148.0,196.0,-48.0,-296.0,-296.0,-148.0])
+
     # data in the form of list of tuples
     hour_power_demand = pd.DataFrame(
         [1036, 1110, 1258, 1406, 1480, 1628, 1702, 1776, 1924, 2022, 2106, 2150, 2072, 1924,
@@ -55,23 +58,16 @@ class GeneratorsEnv(gym.Env):
                "hour12", "hour13", "hour14", "hour15", "hour16", "hour17", "hour18", "hour19", "hour20", "hour21",
                "hour22", "hour23", "hour24"])
 
+    hour_power_demand_diff = hour_power_demand.diff().fillna(0.)  # Get diff values and fill NaN with 0.0
+    states = hour_power_demand_diff.assign(p_n_m_prev=0.)  # Add new column and set all rows to 0.0
+
     def __init__(self):
         print("Generators Environment Initialised")
-
-        df = self.hour_power_demand.diff()
-        df2 = pd.DataFrame(
-            [0, 1036, 1110, 1258, 1406, 1480, 1628, 1702, 1776, 1924, 2022, 2106, 2150, 2072, 1924,
-             1776, 1554, 1480, 1628, 1776, 1972, 1924, 1628, 1332],
-            columns=["P_n_(m-1)"],
-            index=["hour1", "hour2", "hour3", "hour4", "hour5", "hour6", "hour7", "hour8", "hour9", "hour10", "hour11",
-                   "hour12", "hour13", "hour14", "hour15", "hour16", "hour17", "hour18", "hour19", "hour20", "hour21",
-                   "hour22", "hour23", "hour24"])
-
-        df["P_n_(m-1)"] = Series(df2.loc[:, "P_n_(m-1)"], index=df.index)
-        self.state = df
+        self.current_hour = 0
+        self.state = self.states.iloc[self.current_hour, :]
         print(self.state)
         self.active_unit = "unit1"
-        self.counter = 0
+
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
@@ -87,10 +83,12 @@ class GeneratorsEnv(gym.Env):
         c_n = self.generator_characteristics.loc[unit, "c_i"]
         d_n = self.generator_characteristics.loc[unit, "d_i"]
         e_n = self.generator_characteristics.loc[unit, "e_i"]
-        P_min_n = self.generator_characteristics.loc[unit, "p_min_i"]
-        P_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
+        p_min_n = self.generator_characteristics.loc[unit, "p_min_i"]
+
+        p_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
                                   high=self.generator_characteristics.loc[unit, "p_max_i"])
-        return round(a_n + (b_n * P_n_m) + c_n * (P_n_m ** 2) + abs(d_n * sin(e_n * (P_min_n - P_n_m))), 2)
+
+        return round(a_n + (b_n * p_n_m) + c_n * (p_n_m ** 2) + abs(d_n * sin(e_n * (p_min_n - p_n_m))), 2)
 
     def cost_function_global(self):
         global_cost = 0
@@ -149,13 +147,18 @@ class GeneratorsEnv(gym.Env):
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
-        P_n = self.generator_characteristics.loc[self.active_unit, "p_min_i"] + action * ((
-                                                                                                      self.generator_characteristics.loc[
-                                                                                                          self.active_unit, "p_max_i"] -
-                                                                                                      self.generator_characteristics.loc[
-                                                                                                          self.active_unit, "p_min_i"]) / 100)
-        print(P_n)
-        state = self.state
+
+        ur_i = self.generator_characteristics.loc[self.active_unit, "ur_i"]
+        dr_i = self.generator_characteristics.loc[self.active_unit, "dr_i"]
+        p_min_i = self.generator_characteristics.loc[self.active_unit, "p_min_i"]
+        p_max_i = self.generator_characteristics.loc[self.active_unit, "p_max_i"]
+        p_n = p_min_i + action * ((p_max_i - p_min_i) / self.action_space.n)
+
+        self.current_hour += 1
+        self.states.iloc[self.current_hour, self.states.columns.get_loc('p_n_m_prev')] = p_n
+        self.state = self.states.iloc[self.current_hour, :]
+        #print(self.state)
+
         if self.done == 1:
             print("Game Over")
             return [self.state, self.reward, self.done, self.add]
@@ -170,9 +173,15 @@ class GeneratorsEnv(gym.Env):
         print("Generators Environment Reset")
         # self.state = hour_power_demand.diff()
         self.state = []
-        self.counter = 0
+        #self.counter = 0
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
+
+import random
+gens1 = GeneratorsEnv()
+for x in range(0, gens1.M - 1):
+    gens1.step(random.randrange(gens1.action_space.n + 1))  # Take random action
+print(gens1.states)
