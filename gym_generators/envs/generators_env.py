@@ -6,7 +6,7 @@ from math import exp
 from pandas import Series
 
 
-class Generators(gym.Env):
+class GeneratorsEnv(gym.Env):
     """Class for Generators environment"""
     metadata = {'render.modes': ['human']}
 
