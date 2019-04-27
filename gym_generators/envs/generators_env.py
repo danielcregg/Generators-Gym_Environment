@@ -14,8 +14,9 @@ class GeneratorsEnv(gym.Env):
     M = 24  # M = number of hours in day
     E = 10  # Emissions scaling factor
 
+
     # DataFrame created with generator data in the form of list of tuples
-    generator_characteristics = pd.DataFrame(
+    gen_chars = pd.DataFrame(
         [(150, 470, 786.7988, 38.5397, 0.1524, 450, 0.041, 103.3908, -2.4444, 0.0312, 0.5035, 0.0207, 80, 80),
          (135, 470, 451.3251, 46.1591, 0.1058, 600, 0.036, 103.3908, -2.4444, 0.0312, 0.5035, 0.0207, 80, 80),
          (73, 340, 1049.9977, 40.3965, 0.0280, 320, 0.028, 300.3910, -4.0695, 0.0509, 0.4968, 0.0202, 80, 80),
@@ -60,54 +61,53 @@ class GeneratorsEnv(gym.Env):
     states = hour_power_demand_diff.assign(p_n_m_prev=0.)  # Add new column and set all rows to 0.0
 
     def __init__(self):
-        print("Generators Environment Initialised")
-        self.current_hour = 0
-        self.state = self.states.iloc[self.current_hour, :]
-        print(self.state)
+        print("Generators Environment Initialising...")
+        self.current_hour = self.states.index.get_loc("hour1") # =0
         self.active_unit = "unit1"
+        self.action_space = spaces.Discrete(101)  # Set with 101 elements {0, 1, 2 ... 100}
+        self.states.iloc[self.current_hour, self.states.columns.get_loc("p_n_m_prev")] = self.gen_chars.loc[self.active_unit, "p_min_i"]
 
+        self.state = self.states.iloc[self.current_hour, : ]
+        #self.state = self.states.loc["hour1", : ]
+
+        self.reward = 0
         self.done = 0
         self.add = [0, 0]
-        self.reward = 0
-        # Set with 101 elements {0, 1, 2 ... 100}
-        self.action_space = spaces.Discrete(101)
+        print("Generators Environment Initialised...")
 
     def show_unit_characteristics(self, unit):
         print("Unit Name:", unit)
-        print(self.generator_characteristics.loc[unit, :])
+        print(self.gen_chars.loc[unit, :])
 
     def cost_function_local(self, unit):
-        a_n = self.generator_characteristics.loc[unit, "a_i"]
-        b_n = self.generator_characteristics.loc[unit, "b_i"]
-        c_n = self.generator_characteristics.loc[unit, "c_i"]
-        d_n = self.generator_characteristics.loc[unit, "d_i"]
-        e_n = self.generator_characteristics.loc[unit, "e_i"]
-        p_min_n = self.generator_characteristics.loc[unit, "p_min_i"]
-
-        p_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
-                                  high=self.generator_characteristics.loc[unit, "p_max_i"])
-
+        a_n = self.gen_chars.loc[unit, "a_i"]
+        b_n = self.gen_chars.loc[unit, "b_i"]
+        c_n = self.gen_chars.loc[unit, "c_i"]
+        d_n = self.gen_chars.loc[unit, "d_i"]
+        e_n = self.gen_chars.loc[unit, "e_i"]
+        p_min_n = self.gen_chars.loc[unit, "p_min_i"]
+        p_n_m = np.random.uniform(low=self.gen_chars.loc[unit, "p_min_i"], high=self.gen_chars.loc[unit, "p_max_i"])
         return round(a_n + (b_n * p_n_m) + c_n * (p_n_m ** 2) + abs(d_n * sin(e_n * (p_min_n - p_n_m))), 2)
 
     def cost_function_global(self):
         global_cost = 0
-        for i, row in self.generator_characteristics.iterrows():
+        for i in self.gen_chars.iterrows():
             global_cost += self.cost_function_local(i)
         return round(global_cost, 2)
 
     def emissions_function_local(self, unit):
-        alpha_n = self.generator_characteristics.loc[unit, "alpha_i"]
-        beta_n = self.generator_characteristics.loc[unit, "beta_i"]
-        gamma_n = self.generator_characteristics.loc[unit, "gamma_i"]
-        eta_n = self.generator_characteristics.loc[unit, "eta_i"]
-        delta_n = self.generator_characteristics.loc[unit, "delta_i"]
+        alpha_n = self.gen_chars.loc[unit, "alpha_i"]
+        beta_n = self.gen_chars.loc[unit, "beta_i"]
+        gamma_n = self.gen_chars.loc[unit, "gamma_i"]
+        eta_n = self.gen_chars.loc[unit, "eta_i"]
+        delta_n = self.gen_chars.loc[unit, "delta_i"]
         p_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
                                   high=self.generator_characteristics.loc[unit, "p_max_i"])
         return self.E * (alpha_n + (beta_n * p_n_m) + gamma_n * (p_n_m ** 2) + eta_n * exp(delta_n * p_n_m))
 
     def emissions_function_global(self):
         global_emissions = 0
-        for i, row in self.generator_characteristics.iterrows():
+        for i, row in self.gen_chars.iterrows():
             global_emissions += self.emissions_function_local(i)
         return global_emissions
 
@@ -145,18 +145,19 @@ class GeneratorsEnv(gym.Env):
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
-
-        ur_i = self.generator_characteristics.loc[self.active_unit, "ur_i"]
-        dr_i = self.generator_characteristics.loc[self.active_unit, "dr_i"]
-        p_min_i = self.generator_characteristics.loc[self.active_unit, "p_min_i"]
-        p_max_i = self.generator_characteristics.loc[self.active_unit, "p_max_i"]
+        
+        #ur_i = self.gen_chars.loc[self.active_unit, "ur_i"]
+        #dr_i = self.gen_chars.loc[self.active_unit, "dr_i"]
+        p_min_i = self.gen_chars.loc[self.active_unit, "p_min_i"]
+        p_max_i = self.gen_chars.loc[self.active_unit, "p_max_i"]
         p_n = p_min_i + action * ((p_max_i - p_min_i) / self.action_space.n)
-
+        # Move to next hour
         self.current_hour += 1
-        self.states.iloc[self.current_hour, self.states.columns.get_loc('p_n_m_prev')] = p_n
+        # Update state
         self.state = self.states.iloc[self.current_hour, :]
-        #print(self.state)
-
+       
+        self.states.iloc[self.current_hour, self.states.columns.get_loc('p_n_m_prev')] = p_n
+        
         if self.done == 1:
             print("Game Over")
             return [self.state, self.reward, self.done, self.add]
