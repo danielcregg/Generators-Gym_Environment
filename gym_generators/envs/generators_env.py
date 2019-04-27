@@ -2,9 +2,7 @@ import gym
 from gym import spaces
 import numpy as np
 import pandas as pd  # import pandas to use pandas DataFrame
-from math import sin
-from math import exp
-from pandas import Series
+from math import sin, exp
 
 
 class GeneratorsEnv(gym.Env):
@@ -176,7 +174,7 @@ class GeneratorsEnv(gym.Env):
         #self.counter = 0
         self.done = 0
         self.add = [0, 0]
-        self.reward = 0
+        self.reward = 0git 
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
