@@ -69,7 +69,8 @@ class GeneratorsEnv(gym.Env):
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
-        self.action_space = spaces.Discrete(101)  # Set with 101 elements {0, 1, 2 ... 100}
+        # Set with 101 elements {0, 1, 2 ... 100}
+        self.action_space = spaces.Discrete(101)
 
     def show_unit_characteristics(self, unit):
         print("Unit Name:", unit)
@@ -100,10 +101,9 @@ class GeneratorsEnv(gym.Env):
         gamma_n = self.generator_characteristics.loc[unit, "gamma_i"]
         eta_n = self.generator_characteristics.loc[unit, "eta_i"]
         delta_n = self.generator_characteristics.loc[unit, "delta_i"]
-        P_min_n = self.generator_characteristics.loc[unit, "p_min_i"]
-        P_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
+        p_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
                                   high=self.generator_characteristics.loc[unit, "p_max_i"])
-        return self.E * (alpha_n + (beta_n * P_n_m) + gamma_n * (P_n_m ** 2) + eta_n * exp(delta_n * P_n_m))
+        return self.E * (alpha_n + (beta_n * p_n_m) + gamma_n * (p_n_m ** 2) + eta_n * exp(delta_n * p_n_m))
 
     def emissions_function_global(self):
         global_emissions = 0
@@ -161,7 +161,7 @@ class GeneratorsEnv(gym.Env):
             print("Game Over")
             return [self.state, self.reward, self.done, self.add]
         else:
-            print("Game in progress")
+        #    print("Game in progress")
             return [self.state, self.reward, self.done, self.add]
 
     def render(self):
@@ -174,12 +174,12 @@ class GeneratorsEnv(gym.Env):
         #self.counter = 0
         self.done = 0
         self.add = [0, 0]
-        self.reward = 0git 
+        self.reward = 0
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
 import random
 gens1 = GeneratorsEnv()
 for x in range(0, gens1.M - 1):
-    gens1.step(random.randrange(gens1.action_space.n + 1))  # Take random action
+    gens1.step(random.randrange(gens1.action_space.n))  # Take random action
 print(gens1.states)
