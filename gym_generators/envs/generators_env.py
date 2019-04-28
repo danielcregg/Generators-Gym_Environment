@@ -13,7 +13,9 @@ class GeneratorsEnv(gym.Env):
     N = 10  # N = number of generators
     M = 24  # M = number of hours in day
     E = 10  # Emissions scaling factor
-
+    Wc = 0.225  # Cost weight used for linear scalarisation
+    We = 0.275  # Emissions weight used for linear scalarisation
+    Wp = 0.5  # Power weight used for linear scalarisation
 
     # DataFrame created with generator data in the form of list of tuples
     gen_chars = pd.DataFrame(
@@ -62,12 +64,12 @@ class GeneratorsEnv(gym.Env):
 
     def __init__(self):
         print("Generators Environment Initialising...")
-        self.current_hour = self.states.index.get_loc("hour1") # =0
+        self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
         self.active_unit = "unit1"
         self.action_space = spaces.Discrete(101)  # Set with 101 elements {0, 1, 2 ... 100}
-        self.states.iloc[self.current_hour, self.states.columns.get_loc("p_n_m_prev")] = self.gen_chars.loc[self.active_unit, "p_min_i"]
+        self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = self.gen_chars.loc[self.active_unit, "p_min_i"]
 
-        self.state = self.states.iloc[self.current_hour, : ]
+        self.state = self.states.iloc[self.m, : ]
         #self.state = self.states.loc["hour1", : ]
 
         self.reward = 0
@@ -101,47 +103,17 @@ class GeneratorsEnv(gym.Env):
         gamma_n = self.gen_chars.loc[unit, "gamma_i"]
         eta_n = self.gen_chars.loc[unit, "eta_i"]
         delta_n = self.gen_chars.loc[unit, "delta_i"]
-        p_n_m = np.random.uniform(low=self.generator_characteristics.loc[unit, "p_min_i"],
-                                  high=self.generator_characteristics.loc[unit, "p_max_i"])
+        p_n_m = np.random.uniform(low=self.gen_chars.loc[unit, "p_min_i"],       high=self.gen_chars.loc[unit, "p_max_i"])
         return self.E * (alpha_n + (beta_n * p_n_m) + gamma_n * (p_n_m ** 2) + eta_n * exp(delta_n * p_n_m))
 
     def emissions_function_global(self):
         global_emissions = 0
-        for i, row in self.gen_chars.iterrows():
+        for i in self.gen_chars.iterrows():
             global_emissions += self.emissions_function_local(i)
         return global_emissions
-
-        # Show full dataFrame
-        # print(generator_characteristics)
-
-        # select a column by name (i.e. label)
-        # print(generator_characteristics.loc[:, "b_i"])
-
-        # Get numpy array instead of pandas series
-        # print(generator_characteristics.loc[:, "b_i"]).values
-
-        # Select a unit by label
-        # print(generator_characteristics.loc["unit3", :])
-
-        # Select rows based on cloumn value
-        # print(generator_characteristics.loc[generator_characteristics.loc[:, "dr_i"] <= 50, :])
-
-        # Select a specific unit value by label
-        # print(generator_characteristics.loc["unit3", "d_i"])
-        # Show full dataFrame
-
-        # --------------------------------------------------------------------------------
-
-        # Select a specific unit value by its index
-        # print(B.iloc[0,0])
-
-        # Show full dataFrame
-        # print(hour_power_demand)
-
-        # ax = hour_power_demand.plot(title="HOURLY POWER DEMAND", kind="bar", color='red')
-
-        # ax.set_xlabel("Hour")
-        # ax.set_ylabel("MW")
+    
+    def render(self):
+        print("This is a render of the Generators Environment")
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
@@ -151,18 +123,25 @@ class GeneratorsEnv(gym.Env):
         p_min_i = self.gen_chars.loc[self.active_unit, "p_min_i"]
         p_max_i = self.gen_chars.loc[self.active_unit, "p_max_i"]
         p_n = p_min_i + action * ((p_max_i - p_min_i) / self.action_space.n)
-        # Move to next hour
-        self.current_hour += 1
-        # Update state
-        self.state = self.states.iloc[self.current_hour, :]
-       
-        self.states.iloc[self.current_hour, self.states.columns.get_loc('p_n_m_prev')] = p_n
+    
         
+        # Move to next hour
+        self.m += 1
+        # Update state
+        self.state = self.states.iloc[self.m, :]
+       
+        self.states.iloc[self.m, self.states.columns.get_loc('p_n_m_prev')] = p_n
+
+        rc=0  # to be calculated
+        re=0  # to be calculated
+        rp=0  # to be calculated
+
+        self.reward = (self.Wc*rc)*(self.We*re)*(self.Wp*rp)
         if self.done == 1:
-            print("Game Over")
+            print("Episode Complete.")
             return [self.state, self.reward, self.done, self.add]
         else:
-        #    print("Game in progress")
+        #    print("Episode in progress...")
             return [self.state, self.reward, self.done, self.add]
 
     def render(self):
