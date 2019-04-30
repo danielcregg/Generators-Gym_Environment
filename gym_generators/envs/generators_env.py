@@ -78,6 +78,42 @@ class GeneratorsEnv(gym.Env):
         print("Unit Name:", unit)
         print(self.gen_chars.loc[unit, :])
 
+
+    def find_p_d_m(self, m):  # Input m = the hour
+        if type(m) == str:
+            assert m in self.hour_power_demand.index, "%r (%s) invalid hour" % (m,type(m))
+            p_n_m = self.hour_power_demand.loc[m, "p_d"]
+        elif type(m) == int:
+            assert  type(m) == int and m > 0 and m < self.M, "%r (%s) invalid hour" % (m,type(m))
+            p_n_m = self.hour_power_demand.iloc[m - 1, 0]
+        return p_n_m
+    
+    # Find the power loss of a generator unit 
+    # Need to work on this after i figure out rewards system
+    def find_p_l_m(self, n, m):  # Input m = the hour
+        if type(m) == str:
+            assert m in self.hour_power_demand.index, "%r (%s) invalid hour" % (m,type(m))
+            assert n in self.gen_chars.index, "%r (%s) invalid hour" % (n,type(n))
+            p_l_m = 0 # 
+        elif type(m) == int:
+            assert  type(m) == int and m > 0 and m < self.M, "%r (%s) invalid hour" % (m,type(m))
+            assert  type(n) == int and n > 0 and n < self.N, "%r (%s) invalid hour" % (n,type(n))
+            p_l_m = 0 # 
+        return p_l_m
+    
+    # Find the power output of a generator unit - Adgent chooes this ... 
+    # Need to work on this after i figure out rewards system
+    def find_p_n_m(self, n, m):  # Input n = generator unit number
+        if type(n) == str:
+            assert m in self.hour_power_demand.index, "%r (%s) invalid hour" % (m,type(m))
+            assert n in self.gen_chars.index, "%r (%s) invalid hour" % (n,type(n))
+            p_n_m = 0 # agent to determine
+        elif type(m) == int:
+            assert  type(m) == int and m > 0 and m < self.M, "%r (%s) invalid hour" % (m,type(m))
+            assert  type(n) == int and n > 0 and n < self.N, "%r (%s) invalid hour" % (n,type(n))
+            p_n_m = 0
+        return p_n_m
+
     def cost_function_local(self, unit):
         a_n = self.gen_chars.loc[unit, "a_i"]
         b_n = self.gen_chars.loc[unit, "b_i"]
@@ -108,7 +144,17 @@ class GeneratorsEnv(gym.Env):
         for i in self.gen_chars.iterrows():
             global_emissions += self.emissions_function_local(i)
         return global_emissions
-    
+
+    # Find the Power output of the slack generator at a given hour m
+    def find_p_1_m(self, m):
+        print("This is the Slack power ouput at given hour")
+        p_d_m = find_p_d_m(m)
+        p_l_m = find_p_l_m(m)
+        for n in range (2..self.N):
+            p_n_m += find_p_d_m(m)
+        #p_m = p_d_m + p_l_m - (p_n_m_non_slack_total)
+        #return p_m
+
     def global_penalty_fuction(self):
         print("This is the Global Penalty Function")
         return 0
