@@ -207,7 +207,9 @@ class GeneratorsEnv(gym.Env):
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
 import random
+
 gens1 = GeneratorsEnv()
 for x in range(0, gens1.M - 1):
     gens1.step(random.randrange(gens1.action_space.n))  # Take random action
+
 print(gens1.states)
