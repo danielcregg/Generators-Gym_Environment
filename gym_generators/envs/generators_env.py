@@ -60,7 +60,7 @@ class GeneratorsEnv(gym.Env):
 
     # data in the form of list of tuples
     p_n_m = pd.DataFrame(0., columns=["hour1", "hour2", "hour3", "hour4", "hour5", "hour6", "hour7", "hour8", "hour9", "hour10", "hour11", "hour12", "hour13", "hour14", "hour15", "hour16", "hour17", "hour18", "hour19", "hour20", "hour21","hour22", "hour23", "hour24"], index=["unit1", "unit2", "unit3", "unit4", "unit5", "unit6", "unit7", "unit8", "unit9", "unit10"])
-
+        
     def __init__(self):
         print("Generators Environment Initialising...")
         self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
@@ -70,7 +70,6 @@ class GeneratorsEnv(gym.Env):
 
         self.state = self.states.iloc[self.m, : ]
         #self.state = self.states.loc["hour1", : ]
-    	
         for row in self.p_n_m.index:
             # Start all generators at min power value
             #self.p_n_m["hour1"][row] = self.gen_chars["p_min_i"][row]
@@ -122,13 +121,14 @@ class GeneratorsEnv(gym.Env):
             p_n_m = 0
         return p_n_m
 
-    def local_cost_function(self, unit, p_n_m):
+    def local_cost_function(self, unit, hour):
         # Get required variables
         a_n = self.gen_chars.loc[unit, "a_i"]
         b_n = self.gen_chars.loc[unit, "b_i"]
         c_n = self.gen_chars.loc[unit, "c_i"]
         d_n = self.gen_chars.loc[unit, "d_i"]
         e_n = self.gen_chars.loc[unit, "e_i"]
+        p_n_m = self.p_n_m.loc["unit1"]["hour1"]
         p_min_n = self.gen_chars.loc[unit, "p_min_i"]
         return round(a_n + (b_n * p_n_m) + c_n * (p_n_m ** 2) + abs(d_n * sin(e_n * (p_min_n - p_n_m))), 2)
 
@@ -280,7 +280,8 @@ print(gens1.states)
 
 unit = "unit1"
 p_n_m = np.random.uniform(low=gens1.gen_chars.loc[unit, "p_min_i"],high=gens1.gen_chars.loc[unit, "p_max_i"])
-print(gens1.local_cost_function(unit, p_n_m))
+
+print(gens1.local_cost_function("unit1", "hour1"))
 
 #gens1.find_constrained_action_space("unit1", 470)
 
