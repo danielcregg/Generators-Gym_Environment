@@ -324,6 +324,7 @@ class GeneratorsEnv(gym.Env):
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
+        return state
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
