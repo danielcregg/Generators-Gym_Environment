@@ -306,9 +306,15 @@ class GeneratorsEnv(gym.Env):
 
     def reset(self):
         print("Generators Environment Reset")
-        # self.state = hour_power_demand.diff()
-        self.state = []
-        #self.counter = 0
+        self.m = 0
+        self.states2.fill(0.)
+        state = 0
+        for n in self.gen_chars.index:
+            self.states2[state] = [0. , self.unit_get_random_power(n)]
+            state += self.M
+        self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
+        self.state = self.states2[self.m]
+        self.active_unit = "unit1"
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
