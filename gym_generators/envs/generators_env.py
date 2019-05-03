@@ -17,7 +17,8 @@ class GeneratorsEnv(gym.Env):
     We = 0.275  # Emissions weight used for linear scalarisation
     Wp = 0.5    # Power weight used for linear scalarisation
     C = 10E6    # C is the violation constant
-    states2 = np.zeros([240,2])
+    states2 = np.zeros([240,2]) # 10 gens
+    
 
     # DataFrame created with generator data in the form of list of tuples
     gen_chars = pd.DataFrame(
@@ -75,12 +76,14 @@ class GeneratorsEnv(gym.Env):
         #print(self.states2)
         
         self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
-        self.state = self.states2[self.m]
+        
+        #self.state = self.states2[self.m]
+        
         self.active_unit = "unit1"
         self.action_space = spaces.Discrete(101)  # Set with 101 elements {0, 1, 2 ... 100}
         self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = self.gen_chars.loc[self.active_unit, "p_min_i"]
 
-        self.state = self.states.iloc[self.m, : ]
+        #self.state = self.states.iloc[self.m, : ]
         #self.state = self.states.loc["hour1", : ]
         # for unit in self.p_n_m.index:
         #     # Start all generators at min power value
@@ -88,6 +91,7 @@ class GeneratorsEnv(gym.Env):
         #     #Start all generators at random power value within discrete range
         #     self.p_n_m["hour1"][unit] = self.gen_chars["p_min_i"][unit] + ((self.gen_chars["p_max_i"][unit] - self.gen_chars["p_min_i"][unit]) * (np.random.randint(0, 101)/100))
         # print(self.p_n_m)
+        self.state = 0
         self.reward = 0
         self.done = 0
         self.add = [0, 0]
@@ -287,6 +291,7 @@ class GeneratorsEnv(gym.Env):
             
         # Move to next hour
         self.m += 1
+        self.state+=1
         # Update state
         delta_p_d_n = self.hour_power_demand_diff.iloc[self.m , 0]
         print("sdfsfsdf", delta_p_d_n)
@@ -294,8 +299,8 @@ class GeneratorsEnv(gym.Env):
         print(self.states2[self.m - 1][1])
         self.states2[self.m] = [delta_p_d_n, self.p_n_m.iloc[0,self.m - 2]]
         
-        self.state = self.states2[self.m]
-
+        #self.state = self.states2[self.m]
+        
         # self.states.iloc[self.m, self.states.columns.get_loc('p_n_m_prev')] = p_n
 
         #print("Episode in progress...")
@@ -313,7 +318,8 @@ class GeneratorsEnv(gym.Env):
             self.states2[state] = [0. , self.unit_get_random_power(n)]
             state += self.M
         self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
-        self.state = self.states2[self.m]
+        #self.state = self.states2[self.m]
+        self.state = 0
         self.active_unit = "unit1"
         self.done = 0
         self.add = [0, 0]
@@ -324,7 +330,6 @@ class GeneratorsEnv(gym.Env):
 #gens1 = GeneratorsEnv()
 #for x in range(0, gens1.M):
 #    print(gens1.step(gens1.action_space.sample()))  # Take random action
-
 
 
 
