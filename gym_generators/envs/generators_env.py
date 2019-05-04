@@ -72,12 +72,18 @@ class GeneratorsEnv(gym.Env):
     def __init__(self):
         print("Generators Environment Initialising...")
         self.states2.fill(0.)
-        state = 0
+        state_fill = 0
         for n in self.gen_chars.index:
-            self.states2[state] = [0. , self.unit_get_random_power(n)]
-            state += self.M
-        #print(self.states2)
-        
+            self.states2[state_fill] = [0. , self.unit_get_random_power(n)]
+            state_fill += self.M
+        # set power demand deltas
+        m = 0
+        for x in range(0, 240):
+            self.states2[x][0] = self.hour_power_demand_diff.iloc[m , 0]
+            m+=1
+            if m == 24:
+                m=0
+
         self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
         
         #self.state = self.states2[self.m]
@@ -94,7 +100,7 @@ class GeneratorsEnv(gym.Env):
         #     #Start all generators at random power value within discrete range
         #     self.p_n_m["hour1"][unit] = self.gen_chars["p_min_i"][unit] + ((self.gen_chars["p_max_i"][unit] - self.gen_chars["p_min_i"][unit]) * (np.random.randint(0, 101)/100))
         # print(self.p_n_m)
-        self.state = 0
+        self.state = [0,0,0,0,0,0,0,0,0]
         self.reward = 0
         self.done = 0
         self.add = [0, 0]
@@ -194,12 +200,12 @@ class GeneratorsEnv(gym.Env):
     # Find the Power output of the slack generator at a given hour m
     def find_p_1_m(self, m):
         print("This is the Slack power ouput at given hour")
-        p_d_m = find_p_d_m(m)
-        p_l_m = find_p_l_m(m)
+        p_d_m = self.find_p_d_m(m)
+        p_l_m = self.find_p_l_m(m)
         for n in range (2..self.N):
-            p_n_m += find_p_d_m(m)
-        #p_m = p_d_m + p_l_m - (p_n_m_non_slack_total)
-        #return p_m
+            p_n_m_non_slack_gens += find_p_n_m(n)
+        p_1_m = p_d_m + p_l_m - p_n_m_non_slack_gens
+        return p_1_m
 
     def f_p_g(self, m):
         print("This is the Global Penalty Function")
@@ -268,7 +274,6 @@ class GeneratorsEnv(gym.Env):
         print(possible_actions)
         return possible_actions
 
-
     def step(self, action):
         print("action",action)
         print("hour:", self.hour_power_demand.index[self.m])
@@ -294,7 +299,8 @@ class GeneratorsEnv(gym.Env):
             
         # Move to next hour
         self.m += 1
-        self.state+=1
+        self.state = [x+1 for x in self.state]
+
         # Update state
         delta_p_d_n = self.hour_power_demand_diff.iloc[self.m , 0]
         print("sdfsfsdf", delta_p_d_n)
@@ -322,8 +328,7 @@ class GeneratorsEnv(gym.Env):
             state += self.M
         self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
         #self.state = self.states2[self.m]
-        self.state = 0
-        self.active_unit = "unit1"
+        self.state = [0,0,0,0,0,0,0,0,0]
         self.done = 0
         self.add = [0, 0]
         self.reward = 0
@@ -331,13 +336,13 @@ class GeneratorsEnv(gym.Env):
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
-#gens1 = GeneratorsEnv()
+gens1 = GeneratorsEnv()
 #for x in range(0, gens1.M):
 #    print(gens1.step(gens1.action_space.sample()))  # Take random action
 
+print(gens1.states2)
+#print(gens1.find_p_1_m(1))
 
-
-#print(gens1.states)
 #print(gens1.unit_get_random_power(1))
 #print(gens1.gen_chars.columns.get_loc("p_min_i"))
 #gens1.show_unit_characteristics("unit1")
