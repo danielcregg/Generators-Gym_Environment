@@ -164,14 +164,28 @@ class GeneratorsEnv(gym.Env):
     # Find the power output of a generator unit - Adgent chooes this ... 
     # Need to work on this after i figure out rewards system
     def get_p_n_m(self, n, m):  # Input n = generator unit number
-        #if type(n) == str:
-        #    assert m in self.hour_power_demand.index, "%r (%s) invalid hour" % (m,type(m))
-        # #  assert n in self.gen_chars.index, "%r (%s) invalid hour" % (n,type(n))
-        #    p_n_m = 0 # agent to determine
-        #elif type(m) == int:
+        if type(n) == str:
+            assert n in self.p_n_m_df.index, "%r (%s) invalid hour" % (n,type(n))
+            n = self.p_n_m_df.index.get_loc(n) + 1
+        if type(m) == str:  
+            assert m in self.p_n_m_df.columns, "%r (%s) invalid hour" % (m,type(m))
+            m = self.p_n_m_df.columns.get_loc(m) + 1
         assert  type(n) == int and n > 0 and n <= self.N, "%r (%s) invalid hour" % (n,type(n))
         assert  type(m) == int and m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
         return self.p_n_m_df.iloc[n -1, m - 1]
+
+    def get_p_n_m_prev(self, n, m):  # Input n = generator unit number
+        if type(n) == str:
+            assert n in self.p_n_m_df.index, "%r (%s) invalid hour" % (n,type(n))
+            n = self.p_n_m_df.index.get_loc(n) + 1
+        if type(m) == str:  
+            assert m in self.p_n_m_df.columns, "%r (%s) invalid hour" % (m,type(m))
+            m = self.p_n_m_df.columns.get_loc(m) + 1
+        assert  type(n) == int and n > 0 and n <= self.N, "%r (%s) invalid hour" % (n,type(n))
+        assert  type(m) == int and m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
+        return self.states2[((n-1)  * self.M) + (m - 1)][1]
+
+
 
     def get_f_c_l(self, n, m):
         assert  type(n) == int and n > 0 and n <= self.N, "%r (%s) invalid hour" % (n,type(n))
@@ -272,7 +286,7 @@ class GeneratorsEnv(gym.Env):
     # Find the Power output of the slack generator at a given hour m
     def get_p_1_m(self, m):
         # Solve the quadratic equation ax**2 + bx + c = 0
-        assert  type(m) == int and m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
+        assert m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
         sum_b=0
         sum_c1=0
         sum_c2=0
@@ -305,41 +319,40 @@ class GeneratorsEnv(gym.Env):
             p_1_m2 = (-b-math.sqrt(d))/(2*a)
             return p_1_m2  #p_1_m1, p_1_m2
 
-    def f_p_g(self, m):
-        print("This is the Global Penalty Function")
-        # Slack generator is unit 1
-        p1m = self.get_p_n_m("unit1", m)
-        p1m_prev = self.states2[0][1] 
-        p1min = self.gen_chars.loc["unit1", "p_min_i"]
-        p1max = self.gen_chars.loc["unit1", "p_max_i"]
+    def get_f_p_g(self, m):
+        #print("This is the Global Penalty Function")
+        p_1_m = self.get_p_1_m(m)
+        p_1_max = self.gen_chars.loc["unit1", "p_max_i"]
+        p_1_min = self.gen_chars.loc["unit1", "p_min_i"]
+        p_1_m_prev = self.get_p_n_m_prev(1, m)
         ur1 = self.gen_chars.loc["unit1", "ur_i"]
         dr1 = self.gen_chars.loc["unit1", "dr_i"]
+        
         delta1 = 0 # delta = 0 if no violation in constraint else 1 if the constraint is violated
         delta2 = 0
 
-        if p1m > p1max:
-            h1 = p1m - p1max
+        if p_1_m > p_1_max:
+            h1 = p_1_m - p_1_max
             delta1 = 1 # delta = 0 if no violation in constraint else 1 if the constraint is violated
-        elif p1m < p1min: 
-            h1 = p1min - p1m
+        elif p_1_m < p_1_min: 
+            h1 = p_1_min - p_1_m
             delta1 = 1 # delta = 0 if no violation in constraint else 1 if the constraint is violated
         else:
             h1 = 0
             delta1 = 0 # delta = 0 if no violation in constraint else 1 if the constraint is violated
 
-        if p1m - p1m_prev > ur1:
-            h2 = (p1m - p1m_prev) - ur1
+        if (p_1_m - p_1_m_prev) > ur1:
+            h2 = (p_1_m - p_1_m_prev) - ur1
             delta2 = 1
-        elif p1m - p1m_prev < -dr1: 
-            h2 = (p1m - p1m_prev) + dr1
+        elif (p_1_m - p_1_m_prev) < -dr1: 
+            h2 = (p_1_m - p_1_m_prev) + dr1
             delta2 = 1
         else:
             h2 = 0
             delta2 = 0
         
-        print(delta1,delta2)
-
-        return self.C * (abs(h1 + 1) * delta1) + self.C * (abs(h2 + 1) * delta2)
+        #print(delta1,delta2)
+        return (self.C * (abs(h1 + 1) * delta1)) + (self.C * (abs(h2 + 1) * delta2))
 
     def find_constrained_action_space(self, unit, p_n_m_prev):
         print("This is the restrain action space Function")
@@ -438,7 +451,7 @@ gen_env1 = GeneratorsEnv()
 #for x in range(0, gen_env1.M):
 #    print(gen_env1.step(gen_env1.action_space.sample()))  # Take random action
 
-print(gen_env1.states2)
+#print(gen_env1.states2)
 
 #print(gen_env1.B[9][9])
 #print(gen_env1.action_space.n)
@@ -447,12 +460,17 @@ print(gen_env1.states2)
 for n in range(2,gen_env1.N +1):
     gen_env1.set_p_n_m(n,1,0)
 
+#print(gen_env1.get_p_n_m_prev(10,1))
+#print(gen_env1.get_p_n_m(1,"hour1"))
+print(gen_env1.get_f_p_g(1))
 #print(gen_env1.get_p_l_m(1)) # No real solution
 #print(gen_env1.get_p_1_m(1)) # Edited to only give one output
 
 #print(gen_env1.get_f_c_l(1,1))
 #print(gen_env1.get_f_c_g(1))
 #print(gen_env1.set_p_n_m(1,1,100))
+
+
 #print(gen_env1.get_f_e_l(1,1))
 #print(gen_env1.get_f_e_g(1))
 
@@ -470,9 +488,9 @@ for n in range(2,gen_env1.N +1):
 #print(gen_env1.get_f_c_g("hour1"))
 #print(gen_env1.get_f_e_l("unit1", "hour1"))
 #print(gen_env1.get_f_e_g("hour1"))
-print(gen_env1.get_p_d_m(1))
-print(gen_env1.get_p_d_m_prev("hour2"))
+#print(gen_env1.get_p_d_m(1))
+#print(gen_env1.get_p_d_m_prev("hour2"))
 
 #gen_env1.find_constrained_action_space("unit1", 470)
 
-#print(gen_env1.f_p_g("hour1"))
+#print(gen_env1.get_f_p_g("hour1"))
