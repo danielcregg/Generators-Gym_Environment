@@ -15,12 +15,9 @@ class GeneratorsEnv(gym.Env):
     M = 24      # M = number of hours in day = Number of States
     N = 10      # N = number of generators (1 slack, 9 agent controlled)
     E = 10      # Emissions scaling factor
-   # Wc = 0.225  # Cost weight used for linear scalarisation
-   # We = 0.275  # Emissions weight used for linear scalarisation
-   # Wp = 0.5    # Power weight used for linear scalarisation
-    Wc = 5  # Cost weight used for linear scalarisation
-    We = 5  # Emissions weight used for linear scalarisation
-   # Wp = 0.5    # Power weight used for linear scalarisation
+    Wc = 0.225  # Cost weight used for linear scalarisation
+    We = 0.275  # Emissions weight used for linear scalarisation
+    Wp = 0.5    # Power weight used for linear scalarisation
     C = 10E6    # C is the violation constant
     states2 = np.zeros([240,2]) # 10 gens
     
@@ -401,7 +398,7 @@ class GeneratorsEnv(gym.Env):
         rc=self.get_f_c_l("unit1", self.hour_power_demand.index[self.m])  # to be calculated
         re=self.get_f_e_l("unit1", self.hour_power_demand.index[self.m])  # to be calculated
         #rp=  # to be calculated
-        self.reward = -((self.Wc*rc)*(self.We*re))#*(self.Wp*rp)
+        self.reward = -((self.Wc*rc)*(self.We*re)*(self.Wp*rp))
         
         if self.m == 23:
             self.done = 1
