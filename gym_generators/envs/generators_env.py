@@ -100,7 +100,7 @@ class GeneratorsEnv(gym.Env):
         #     #Start all generators at random power value within discrete range
         #     self.p_n_m["hour1"][unit] = self.gen_chars["p_min_i"][unit] + ((self.gen_chars["p_max_i"][unit] - self.gen_chars["p_min_i"][unit]) * (np.random.randint(0, 101)/100))
         # print(self.p_n_m)
-        self.state = self.states_array[0]
+        self.state = 1
         self.reward = 0
         self.done = 0
         self.add = [0, 0]
@@ -371,7 +371,7 @@ class GeneratorsEnv(gym.Env):
         action_p_per_segment = (p_max_n - p_min_n)/(num_action_p_segments)
         current_action_number = int(round((p_n_m_prev - p_min_n)/(action_p_per_segment)))
 
-        print("curren action:",current_action_number)
+        #print("curren action:",current_action_number)
         
         max_actions_down = int(round(dr_n/action_p_per_segment))
         max_actions_up = int(round(ur_n/action_p_per_segment))
@@ -382,16 +382,16 @@ class GeneratorsEnv(gym.Env):
         if max_actions_up + current_action_number > num_action_p_segments:
             max_actions_up = num_action_p_segments - current_action_number
         
-        print(max_actions_down, max_actions_up, 1)
+        #print(max_actions_down, max_actions_up, 1)
         
         
         possible_actions = np.arange(current_action_number - max_actions_down, current_action_number + max_actions_up + 1)
-        print(possible_actions)
+        #print(possible_actions)
         return possible_actions
 
     def step(self, action):
-        print("action",action)
-        print("hour:", self.hour_power_demand.index[self.m])
+        #print("action",action)
+        #print("hour:", self.hour_power_demand.index[self.m])
         #print("p_n",self.set_p_n_m_a("unit1", self.hour_power_demand.index[self.m], action))
         
         # Move to next hour after updating all units
@@ -414,7 +414,7 @@ class GeneratorsEnv(gym.Env):
 
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
-            self.states_array[((n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((n - 1) * (self.M - 1)) + (self.m - 2)][1]
+            self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 2)][1]
             self.reward = -1000000  # Heavy neg reward for choosing impossible action. That'll teach him!
         
         if self.m==self.M:
@@ -428,7 +428,7 @@ class GeneratorsEnv(gym.Env):
             self.m += 1
             self.n=1
         
-        self.state+=self.states_array[((n - 1) * (self.M - 1)) + (m - 1)]
+        self.state=((self.n - 1)*self.M) + (self.m)
 
         return [self.state, self.reward, self.done, self.add]
 
@@ -452,7 +452,7 @@ class GeneratorsEnv(gym.Env):
             if m == 24:
                 m=0
 
-        self.state = self.states_array[0]
+        self.state = 1
         self.done = False
         self.add = [0, 0]
         self.reward = 0
@@ -460,8 +460,8 @@ class GeneratorsEnv(gym.Env):
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
-gen_env1 = GeneratorsEnv()
-#for x in range(0, gen_env1.M):
+#gen_env1 = GeneratorsEnv()
+#for states in range(25, len(gen_env1.states_array)):
 #    print(gen_env1.step(gen_env1.action_space.sample()))  # Take random action
 
 #print(gen_env1.states_array)
