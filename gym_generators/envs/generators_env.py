@@ -19,7 +19,7 @@ class GeneratorsEnv(gym.Env):
     We = 0.275  # Emissions weight used for linear scalarisation
     Wp = 0.5    # Power weight used for linear scalarisation
     C = 10E6    # C is the violation constant
-    states2 = np.zeros([240,2]) # 10 gens
+    states_array = np.zeros([M*N,2]) # 10 gens
     
 
     # DataFrame created with generator data in the form of list of tuples
@@ -71,26 +71,26 @@ class GeneratorsEnv(gym.Env):
     def __init__(self):
         print("Generators Environment Initialising...")
         self.action_space = spaces.Discrete(101)  # Set with 101 elements {0, 1, 2 ... 100}
-        self.states2.fill(0.)
+        self.states_array.fill(0.)
         state_fill = 0
         for n in range(1, self.N + 1): #Looping inclusive range
-            self.states2[state_fill] = [0. , self.set_random_p_n_m(n)]
+            self.states_array[state_fill] = [0. , self.set_random_p_n_m(n)]
             state_fill += self.M
         # set power demand deltas
         m = 0
-        for x in range(0, 240):
-            self.states2[x][0] = self.hour_power_demand_diff.iloc[m , 0]
+        for state in range(0, len(self.states_array)):
+            self.states_array[state][0] = self.hour_power_demand_diff.iloc[m , 0]
             m+=1
             if m == 24:
                 m=0
 
-        self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
+        #self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
+        self.m = 1
+        #self.state = self.states_array[self.m]
         
-        #self.state = self.states2[self.m]
+        self.n = 1
         
-        self.active_unit = "unit1"
-        
-        self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = self.gen_chars.loc[self.active_unit, "p_min_i"]
+        #self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = #self.gen_chars.loc[self.active_unit, "p_min_i"]
 
         #self.state = self.states.iloc[self.m, : ]
         #self.state = self.states.loc["hour1", : ]
@@ -100,7 +100,7 @@ class GeneratorsEnv(gym.Env):
         #     #Start all generators at random power value within discrete range
         #     self.p_n_m["hour1"][unit] = self.gen_chars["p_min_i"][unit] + ((self.gen_chars["p_max_i"][unit] - self.gen_chars["p_min_i"][unit]) * (np.random.randint(0, 101)/100))
         # print(self.p_n_m)
-        self.state = [0,0,0,0,0,0,0,0,0]
+        self.state = self.states_array[0]
         self.reward = 0
         self.done = 0
         self.add = [0, 0]
@@ -126,8 +126,8 @@ class GeneratorsEnv(gym.Env):
         p_n_m = p_n_min + ((p_n_max - p_n_min) * (np.random.randint(0, self.action_space.n)/100))
         return p_n_m
 
-    def set_p_n_m(self, n, m, action):
-        assert  type(n) == int and n > 0 and n <= self.N, "%r (%s) invalid unit" % (n,type(n))
+    def set_p_n_m_a(self, n, m, action):
+        assert  type(n) == int and n > 1 and n <= self.N, "%r (%s) invalid unit" % (n,type(n))
         assert  type(m) == int and m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
         assert self.action_space.contains(action), "%r (%s) invalid" % (action,type(action))
         
@@ -137,8 +137,10 @@ class GeneratorsEnv(gym.Env):
         p_n_min = self.gen_chars.iloc[n - 1, p_min_i_col_loc]
         p_n_max = self.gen_chars.iloc[n - 1, p_max_i_col_loc]
 
-        self.p_n_m_df.iloc[n -1, m - 1] = p_n_min + ((p_n_max - p_n_min) * (action/100))
-        return self.p_n_m_df.iloc[n -1, m - 1]
+        p_n_m_a = p_n_min + ((p_n_max - p_n_min) * (action/100))
+        self.p_n_m_df.iloc[n -1, m - 1] = p_n_m_a
+        self.states_array[((n - 1) * (self.M - 1)) + (m - 1)][1] = p_n_m_a
+        return p_n_m_a
 
     def get_p_d_m(self, m):  # Input m = the hour
         if type(m) == str:
@@ -180,7 +182,7 @@ class GeneratorsEnv(gym.Env):
             m = self.p_n_m_df.columns.get_loc(m) + 1
         assert  type(n) == int and n > 0 and n <= self.N, "%r (%s) invalid hour" % (n,type(n))
         assert  type(m) == int and m > 0 and m <= self.M, "%r (%s) invalid hour" % (m,type(m))
-        return self.states2[((n-1)  * self.M) + (m - 1)][1]
+        return self.states_array[((n-1)  * self.M) + (m - 1)][1]
 
 
 
@@ -352,11 +354,16 @@ class GeneratorsEnv(gym.Env):
         return (self.C * (abs(h1 + 1) * delta1)) + (self.C * (abs(h2 + 1) * delta2))
 
     def find_constrained_action_space(self, unit, p_n_m_prev):
-        print("This is the restrain action space Function")
-        p_min_n = self.gen_chars.loc[unit, "p_min_i"]
-        p_max_n = self.gen_chars.loc[unit, "p_max_i"]
-        dr_n = self.gen_chars.loc[unit, "dr_i"]
-        ur_n = self.gen_chars.loc[unit, "ur_i"]
+        #print("This is the restrain action space Function")
+        p_min_i_loc = self.gen_chars.columns.get_loc("p_min_i")
+        p_max_i_loc = self.gen_chars.columns.get_loc("p_max_i")
+        dr_i_loc = self.gen_chars.columns.get_loc("dr_i")
+        ur_i_loc = self.gen_chars.columns.get_loc("ur_i")
+
+        p_min_n = self.gen_chars.iloc[unit-1, p_min_i_loc]
+        p_max_n = self.gen_chars.iloc[unit-1, p_max_i_loc]
+        dr_n = self.gen_chars.iloc[unit-1, dr_i_loc]
+        ur_n = self.gen_chars.iloc[unit-1, ur_i_loc]
         
         #unit_p_range = p_max_n - p_min_n
         # 101 possible actions but 100 power segments in power range
@@ -385,42 +392,44 @@ class GeneratorsEnv(gym.Env):
     def step(self, action):
         print("action",action)
         print("hour:", self.hour_power_demand.index[self.m])
-        print("p_n",self.set_p_n_m("unit1", self.hour_power_demand.index[self.m], action))
-        #print(self.p_n_m.iloc[0,self.m])
-        #self.states2[self.m]
-        #ur_i = self.gen_chars.loc[self.active_unit, "ur_i"]
-        #dr_i = self.gen_chars.loc[self.active_unit, "dr_i"]
-        # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
-        # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
-        # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
-    
-
-        rc=self.get_f_c_l("unit1", self.hour_power_demand.index[self.m])  # to be calculated
-        re=self.get_f_e_l("unit1", self.hour_power_demand.index[self.m])  # to be calculated
-        #rp=  # to be calculated
-        self.reward = -((self.Wc*rc)*(self.We*re)*(self.Wp*rp))
+        #print("p_n",self.set_p_n_m_a("unit1", self.hour_power_demand.index[self.m], action))
         
-        if self.m == 23:
-            self.done = 1
+        # Move to next hour after updating all units
+
+        constrated_action_set  = self.find_constrained_action_space(self.n, self.get_p_n_m_prev(self.n , self.m))
+
+        if action in constrated_action_set:
+            self.set_p_n_m_a(self.n, self.m, action) # Set power of all non-slack units given action
+            
+            #print(self.p_n_m.iloc[0,self.m])
+            #self.states_array[self.m]
+            #ur_i = self.gen_chars.loc[self.active_unit, "ur_i"]
+            #dr_i = self.gen_chars.loc[self.active_unit, "dr_i"]
+            # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
+            # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
+            # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
+            rc=self.get_f_c_g(self.m)
+            re=self.get_f_e_g(self.m)
+            rp=self.get_f_p_g(self.m)
+
+            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+        else:
+            self.states_array[((n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((n - 1) * (self.M - 1)) + (self.m - 2)][1]
+            self.reward = -1000000  # Heavy neg reward for choosing impossible action. That'll teach him!
+        
+        if self.m==self.M:
+            self.done = True
             print("Episode Complete.")
             return [self.state, self.reward, self.done, self.add]
-            
-        # Move to next hour
-        self.m += 1
-        self.state = [x+1 for x in self.state]
-
-        # Update state
-        delta_p_d_n = self.hour_power_demand_diff.iloc[self.m , 0]
-        print("sdfsfsdf", delta_p_d_n)
-       
-        print(self.states2[self.m - 1][1])
-        self.states2[self.m] = [delta_p_d_n, self.p_n_m.iloc[0,self.m - 2]]
         
-        #self.state = self.states2[self.m]
+        self.n+=1
         
-        # self.states.iloc[self.m, self.states.columns.get_loc('p_n_m_prev')] = p_n
+        if self.n==10:
+            self.m += 1
+            self.n=1
+        
+        self.state+=self.states_array[((n - 1) * (self.M - 1)) + (m - 1)]
 
-        #print("Episode in progress...")
         return [self.state, self.reward, self.done, self.add]
 
     def render(self):
@@ -428,19 +437,26 @@ class GeneratorsEnv(gym.Env):
 
     def reset(self):
         print("Generators Environment Reset")
-        self.m = 0
-        self.states2.fill(0.)
-        state = 0
-        for n in self.gen_chars.index:
-            self.states2[state] = [0. , self.set_random_p_n_m(n)]
-            state += self.M
-        self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
-        #self.state = self.states2[self.m]
-        self.state = [0,0,0,0,0,0,0,0,0]
-        self.done = 0
+        self.m=1
+        self.n=2
+        self.states_array.fill(0.)
+        state_fill = 0
+        for n in range(1, self.N + 1): #Looping inclusive range
+            self.states_array[state_fill] = [0. , self.set_random_p_n_m(n)]
+            state_fill += self.M
+        # set power demand deltas
+        m = 0
+        for state in range(0, len(self.states_array)):
+            self.states_array[state][0] = self.hour_power_demand_diff.iloc[m , 0]
+            m+=1
+            if m == 24:
+                m=0
+
+        self.state = self.states_array[0]
+        self.done = False
         self.add = [0, 0]
         self.reward = 0
-        return state
+        return self.state
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
@@ -448,24 +464,24 @@ gen_env1 = GeneratorsEnv()
 #for x in range(0, gen_env1.M):
 #    print(gen_env1.step(gen_env1.action_space.sample()))  # Take random action
 
-#print(gen_env1.states2)
+#print(gen_env1.states_array)
 
 #print(gen_env1.B[9][9])
 #print(gen_env1.action_space.n)
 #print(gen_env1.get_p_l_m(1))
 
-for n in range(2,gen_env1.N +1):
-    gen_env1.set_p_n_m(n,1,0)
+#for n in range(2,gen_env1.N +1):
+#    gen_env1.set_p_n_m_a(n,1,0)
 
 #print(gen_env1.get_p_n_m_prev(10,1))
 #print(gen_env1.get_p_n_m(1,"hour1"))
-print(gen_env1.get_f_p_g(1))
+#print(gen_env1.get_f_p_g(1))
 #print(gen_env1.get_p_l_m(1)) # No real solution
 #print(gen_env1.get_p_1_m(1)) # Edited to only give one output
 
 #print(gen_env1.get_f_c_l(1,1))
 #print(gen_env1.get_f_c_g(1))
-#print(gen_env1.set_p_n_m(1,1,100))
+#print(gen_env1.set_p_n_m_a(1,1,100))
 
 
 #print(gen_env1.get_f_e_l(1,1))
@@ -488,6 +504,6 @@ print(gen_env1.get_f_p_g(1))
 #print(gen_env1.get_p_d_m(1))
 #print(gen_env1.get_p_d_m_prev("hour2"))
 
-#gen_env1.find_constrained_action_space("unit1", 470)
+#gen_env1.find_constrained_action_space(3, 150)
 
 #print(gen_env1.get_f_p_g("hour1"))
