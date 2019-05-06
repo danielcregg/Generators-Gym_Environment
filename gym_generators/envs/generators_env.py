@@ -88,7 +88,7 @@ class GeneratorsEnv(gym.Env):
         self.m = 1
         #self.state = self.states_array[self.m]
         
-        self.n = 1
+        self.n = 2
         
         #self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = #self.gen_chars.loc[self.active_unit, "p_min_i"]
 
@@ -424,10 +424,17 @@ class GeneratorsEnv(gym.Env):
         
         self.n+=1
         
+        self.reward = 0
+        
         if self.n==10:
+            self.get_p_1_m(m)
+            rc=self.get_f_c_g(self.m)
+            re=self.get_f_e_g(self.m)
+            rp=self.get_f_p_g(self.m)
+            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=1
-        
+            
         self.state=((self.n - 1)*self.M) + (self.m)
 
         return [self.state, self.reward, self.done, self.add]
