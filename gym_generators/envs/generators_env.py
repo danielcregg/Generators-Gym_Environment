@@ -433,7 +433,7 @@ class GeneratorsEnv(gym.Env):
             rp=self.get_f_p_g(self.m)
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
-            self.n=1
+            self.n=2
             
         self.state=((self.n - 1)*self.M) + (self.m)
 
