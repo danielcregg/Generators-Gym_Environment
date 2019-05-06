@@ -427,7 +427,7 @@ class GeneratorsEnv(gym.Env):
         self.reward = 0
         
         if self.n==10:
-            self.get_p_1_m(m)
+            self.get_p_1_m(self.m)
             rc=self.get_f_c_g(self.m)
             re=self.get_f_e_g(self.m)
             rp=self.get_f_p_g(self.m)
