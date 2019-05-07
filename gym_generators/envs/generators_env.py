@@ -411,9 +411,9 @@ class GeneratorsEnv(gym.Env):
             # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
             # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
-            #rc=self.get_f_c_g(self.m)
-            #re=self.get_f_e_g(self.m)
-            #rp=self.get_f_p_g(self.m)
+            rc=self.get_f_c_l(self.m)
+            re=self.get_f_e_l(self.m)
+            rp=self.get_f_p_l(self.m)
 
             #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
@@ -422,13 +422,13 @@ class GeneratorsEnv(gym.Env):
         
         self.n+=1
         
-        self.reward = 0
+        self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         
         if self.n==11 and self.m==self.M:
             self.get_p_1_m(self.m)
-            rc=self.get_f_c_g(self.m)
-            re=self.get_f_e_g(self.m)
-            rp=self.get_f_p_g(self.m)
+            #rc=self.get_f_c_g(self.m)
+            #re=self.get_f_e_g(self.m)
+            #rp=self.get_f_p_g(self.m)
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.done = True
             print("Episode Complete.")
@@ -436,14 +436,12 @@ class GeneratorsEnv(gym.Env):
         
         if self.n==11:
             self.get_p_1_m(self.m)
-            rc=self.get_f_c_g(self.m)
-            re=self.get_f_e_g(self.m)
-            rp=self.get_f_p_g(self.m)
+            #rc=self.get_f_c_g(self.m)
+            #re=self.get_f_e_g(self.m)
+            #rp=self.get_f_p_g(self.m)
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=2
-        
-
         
         self.state=((self.n - 1)*self.M) + (self.m)
 
@@ -478,7 +476,7 @@ class GeneratorsEnv(gym.Env):
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
-# gen_env1 = GeneratorsEnv()
+#gen_env1 = GeneratorsEnv()
 # sum =0
 # for n in range(2,gen_env1.N+1):
 #     for m in range(1, gen_env1.M+1):
