@@ -413,7 +413,6 @@ class GeneratorsEnv(gym.Env):
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
             rc=self.get_f_c_l(self.n,self.m)
             re=self.get_f_e_l(self.n,self.m)
-            rp=self.get_f_p_l(self.n,self.m)
 
             #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
@@ -421,29 +420,41 @@ class GeneratorsEnv(gym.Env):
             # Heavy neg reward for choosing impossible action. That'll teach him!
             rc=1000000
             re=1000000
-            rp=1000000
             
         
         self.n+=1
         
-        self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+        #selfish
+        self.Wc = 0.5  # Cost weight used for linear scalarisation
+        self.We = 0.5  # Emissions weight used for linear scalarisation
+        self.reward = -((self.Wc*rc)+(self.We*re))
+        
+        #cooperate
+        #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         
         if self.n==11 and self.m==self.M:
             self.get_p_1_m(self.m)
+            #selfish
+            self.reward = -((self.Wc*rc)+(self.We*re))
+            #cooperate
             #rc=self.get_f_c_g(self.m)
             #re=self.get_f_e_g(self.m)
             #rp=self.get_f_p_g(self.m)
-            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            
             self.done = True
             print("Episode Complete.")
             return [self.state, self.reward, self.done, self.add]
         
         if self.n==11:
             self.get_p_1_m(self.m)
+            #selfish
+            self.reward = -((self.Wc*rc)+(self.We*re))
+            #cooperate
             #rc=self.get_f_c_g(self.m)
             #re=self.get_f_e_g(self.m)
             #rp=self.get_f_p_g(self.m)
-            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=2
         
