@@ -411,9 +411,15 @@ class GeneratorsEnv(gym.Env):
             # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
             # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
+            
             #selfish
             #rc=self.get_f_c_l(self.n,self.m)
             #re=self.get_f_e_l(self.n,self.m)
+            
+            #cooperate
+            rc=0
+            re=0
+            rp=0
 
             #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
@@ -436,21 +442,6 @@ class GeneratorsEnv(gym.Env):
         
         #cooperate
         self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
-        
-        if self.n==11 and self.m==self.M:
-            self.get_p_1_m(self.m)
-            #selfish
-            #self.reward = -((self.Wc*rc)+(self.We*re))
-            #cooperate
-            rc=self.get_f_c_g(self.m)
-            re=self.get_f_e_g(self.m)
-            rp=self.get_f_p_g(self.m)
-            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
-            
-            self.done = True
-            print("Episode Complete.")
-            return [self.state, self.reward, self.done, self.add]
-        
         if self.n==11:
             self.get_p_1_m(self.m)
             #selfish
@@ -462,6 +453,19 @@ class GeneratorsEnv(gym.Env):
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=2
+
+        if self.n==11 and self.m==self.M:
+            #self.get_p_1_m(self.m)
+            #selfish
+            #self.reward = -((self.Wc*rc)+(self.We*re))
+            #cooperate
+            #rc=self.get_f_c_g(self.m)
+            #re=self.get_f_e_g(self.m)
+            #rp=self.get_f_p_g(self.m)
+            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            self.done = True
+            print("Episode Complete.")
+            return [self.state, self.reward, self.done, self.add]
         
         self.state=((self.n - 1)*self.M) + (self.m)
 
