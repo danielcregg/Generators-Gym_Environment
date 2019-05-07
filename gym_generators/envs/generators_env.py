@@ -85,10 +85,10 @@ class GeneratorsEnv(gym.Env):
                 m=0
 
         #self.m = self.states.index.get_loc("hour1") # m = current Hour = 0
-        self.m = 1
+        self.m = 1 
         #self.state = self.states_array[self.m]
         
-        self.n = 2
+        self.n = 2 # start at unit 2
         
         #self.states.iloc[self.m, self.states.columns.get_loc("p_n_m_prev")] = #self.gen_chars.loc[self.active_unit, "p_min_i"]
 
@@ -136,10 +136,11 @@ class GeneratorsEnv(gym.Env):
 
         p_n_min = self.gen_chars.iloc[n - 1, p_min_i_col_loc]
         p_n_max = self.gen_chars.iloc[n - 1, p_max_i_col_loc]
-
+    
         p_n_m_a = p_n_min + ((p_n_max - p_n_min) * (action/100))
         self.p_n_m_df.iloc[n -1, m - 1] = p_n_m_a
-        self.states_array[((n - 1) * (self.M - 1)) + (m - 1)][1] = p_n_m_a
+        if (n <= 10 and m < 24):  
+          self.states_array[((n - 1) * self.M) + m][1] = p_n_m_a
         return p_n_m_a
 
     def get_p_d_m(self, m):  # Input m = the hour
@@ -316,6 +317,8 @@ class GeneratorsEnv(gym.Env):
         else:
             #p_1_m1 = (-b+math.sqrt(d))/(2*a)
             p_1_m2 = (-b-math.sqrt(d))/(2*a)
+            if m<24:
+                self.states_array[m][1] = p_1_m2
             return p_1_m2  #p_1_m1, p_1_m2
 
     def get_f_p_g(self, m):
@@ -408,25 +411,30 @@ class GeneratorsEnv(gym.Env):
             # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
             # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
-            rc=self.get_f_c_g(self.m)
-            re=self.get_f_e_g(self.m)
-            rp=self.get_f_p_g(self.m)
+            #rc=self.get_f_c_g(self.m)
+            #re=self.get_f_e_g(self.m)
+            #rp=self.get_f_p_g(self.m)
 
-            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
             self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 2)][1]
             self.reward = -1000000  # Heavy neg reward for choosing impossible action. That'll teach him!
-        
-        if self.m==self.M:
-            self.done = True
-            print("Episode Complete.")
-            return [self.state, self.reward, self.done, self.add]
         
         self.n+=1
         
         self.reward = 0
         
-        if self.n==10:
+        if self.n==11 and self.m==self.M:
+            self.get_p_1_m(self.m)
+            rc=self.get_f_c_g(self.m)
+            re=self.get_f_e_g(self.m)
+            rp=self.get_f_p_g(self.m)
+            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            self.done = True
+            print("Episode Complete.")
+            return [self.state, self.reward, self.done, self.add]
+        
+        if self.n==11:
             self.get_p_1_m(self.m)
             rc=self.get_f_c_g(self.m)
             re=self.get_f_e_g(self.m)
@@ -434,7 +442,9 @@ class GeneratorsEnv(gym.Env):
             self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=2
-            
+        
+
+        
         self.state=((self.n - 1)*self.M) + (self.m)
 
         return [self.state, self.reward, self.done, self.add]
@@ -458,8 +468,9 @@ class GeneratorsEnv(gym.Env):
             m+=1
             if m == 24:
                 m=0
-
-        self.state = 1
+        
+        # set init state to unit 2 hour 1
+        self.state = self.state=((self.n - 1)*self.M) + (self.m) 
         self.done = False
         self.add = [0, 0]
         self.reward = 0
@@ -467,9 +478,16 @@ class GeneratorsEnv(gym.Env):
         # space = spaces.Discrete(24) # Set with 8 elements {0, 1, 2, ..., 23}
         # self.action_space = spaces.Tuple((spaces.Discrete(101)))
 
-#gen_env1 = GeneratorsEnv()
+# gen_env1 = GeneratorsEnv()
+# sum =0
+# for n in range(2,gen_env1.N+1):
+#     for m in range(1, gen_env1.M+1):
+#         sum+=gen_env1.set_p_n_m_a(n,m,60)
+
+# for m in range(1, gen_env1.M+1):
+#     print(sum/24 + gen_env1.get_p_1_m(m))
 #for states in range(25, len(gen_env1.states_array)):
-#    print(gen_env1.step(gen_env1.action_space.sample()))  # Take random action
+ #   print(gen_env1.step(gen_env1.action_space.sample()))  # Take random action
 
 #print(gen_env1.states_array)
 
@@ -486,7 +504,25 @@ class GeneratorsEnv(gym.Env):
 #print(gen_env1.get_p_l_m(1)) # No real solution
 #print(gen_env1.get_p_1_m(1)) # Edited to only give one output
 
-#print(gen_env1.get_f_c_l(1,1))
+
+
+
+
+# gen_env1.set_p_n_m_a(2,2,0)
+# print(gen_env1.get_p_n_m(2,2))
+# print(gen_env1.get_f_c_l(2,2))
+
+# gen_env1.set_p_n_m_a(2,2,1)
+# print(gen_env1.get_p_n_m(2,2))
+# print(gen_env1.get_f_c_l(2,2))
+
+# gen_env1.set_p_n_m_a(2,2,2)
+# print(gen_env1.get_p_n_m(2,2))
+# print(gen_env1.get_f_c_l(2,2))
+
+
+
+
 #print(gen_env1.get_f_c_g(1))
 #print(gen_env1.set_p_n_m_a(1,1,100))
 
