@@ -411,14 +411,18 @@ class GeneratorsEnv(gym.Env):
             # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
             # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
-            rc=self.get_f_c_l(self.m)
-            re=self.get_f_e_l(self.m)
-            rp=self.get_f_p_l(self.m)
+            rc=self.get_f_c_l(self.n,self.m)
+            re=self.get_f_e_l(self.n,self.m)
+            rp=self.get_f_p_l(self.n,self.m)
 
             #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
             self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 2)][1]
-            self.reward = -1000000  # Heavy neg reward for choosing impossible action. That'll teach him!
+            # Heavy neg reward for choosing impossible action. That'll teach him!
+            rc=1000000
+            re=1000000
+            rp=1000000
+            
         
         self.n+=1
         
