@@ -411,36 +411,41 @@ class GeneratorsEnv(gym.Env):
             # p_min_n = self.gen_chars.loc[self.active_unit, "p_min_i"]
             # p_max_n = self.gen_chars.loc[self.active_unit, "p_max_i"]
             # p_n = p_min_n + action * ((p_max_n - p_min_n) / self.action_space.n)
-            rc=self.get_f_c_l(self.n,self.m)
-            re=self.get_f_e_l(self.n,self.m)
+            #selfish
+            #rc=self.get_f_c_l(self.n,self.m)
+            #re=self.get_f_e_l(self.n,self.m)
 
             #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         else:
             self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 1)][1] = self.states_array[((self.n - 1) * (self.M - 1)) + (self.m - 2)][1]
             # Heavy neg reward for choosing impossible action. That'll teach him!
+            #selfish
+            #rc=1000000
+            #re=1000000
+            #cooperating
             rc=1000000
             re=1000000
-            
-        
+            rp=1000000
+
         self.n+=1
         
         #selfish
-        self.Wc = 0.5  # Cost weight used for linear scalarisation
-        self.We = 0.5  # Emissions weight used for linear scalarisation
-        self.reward = -((self.Wc*rc)+(self.We*re))
+        #self.Wc = 0.5  # Cost weight used for linear scalarisation
+        #self.We = 0.5  # Emissions weight used for linear scalarisation
+        #self.reward = -((self.Wc*rc)+(self.We*re))
         
         #cooperate
-        #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+        self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
         
         if self.n==11 and self.m==self.M:
             self.get_p_1_m(self.m)
             #selfish
-            self.reward = -((self.Wc*rc)+(self.We*re))
+            #self.reward = -((self.Wc*rc)+(self.We*re))
             #cooperate
-            #rc=self.get_f_c_g(self.m)
-            #re=self.get_f_e_g(self.m)
-            #rp=self.get_f_p_g(self.m)
-            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            rc=self.get_f_c_g(self.m)
+            re=self.get_f_e_g(self.m)
+            rp=self.get_f_p_g(self.m)
+            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             
             self.done = True
             print("Episode Complete.")
@@ -449,12 +454,12 @@ class GeneratorsEnv(gym.Env):
         if self.n==11:
             self.get_p_1_m(self.m)
             #selfish
-            self.reward = -((self.Wc*rc)+(self.We*re))
+            #self.reward = -((self.Wc*rc)+(self.We*re))
             #cooperate
-            #rc=self.get_f_c_g(self.m)
-            #re=self.get_f_e_g(self.m)
-            #rp=self.get_f_p_g(self.m)
-            #self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
+            rc=self.get_f_c_g(self.m)
+            re=self.get_f_e_g(self.m)
+            rp=self.get_f_p_g(self.m)
+            self.reward = -((self.Wc*rc)+(self.We*re)+(self.Wp*rp))
             self.m += 1
             self.n=2
         
